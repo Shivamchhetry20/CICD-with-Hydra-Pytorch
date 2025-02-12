@@ -1,0 +1,46 @@
+name: Train Model
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run training script
+      id: train
+      run: |
+        python main.py
+        echo "accuracy=$(cat accuracy.txt)" >> $GITHUB_ENV
+        echo "params=$(cat params.txt)" >> $GITHUB_ENV
+
+    - name: Post results to PR
+      if: github.event_name == 'pull_request'
+      uses: unsplash/comment-on-pr@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        msg: |
+          Model training completed!
+          Accuracy: ${{ env.accuracy }}
+          Parameters: ${{ env.params }}
+        pr_number: ${{ github.event.pull_request.number }}
